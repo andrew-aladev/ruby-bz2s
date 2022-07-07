@@ -1,0 +1,51 @@
+name: test
+
+on:
+  - push
+
+jobs:
+  ubuntu:
+    strategy:
+      matrix:
+        ruby:
+          - 2.6
+          - 2.7
+          - 3.0
+          - 3.1
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - name: Setup dependencies
+        run: sudo apt-get install -y libbz2-dev
+      - name: CI test
+        run: scripts/ci_test.sh
+        env:
+          CI: True
+
+  macos:
+    strategy:
+      matrix:
+        ruby:
+          - 2.6
+          - 2.7
+          - 3.0
+          - 3.1
+    runs-on: macos-11
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - name: Setup dependencies
+        run: brew install bzip2
+      - name: CI test
+        run: scripts/ci_test.sh
+        env:
+          CI: True

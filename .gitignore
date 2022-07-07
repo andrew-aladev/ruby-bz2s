@@ -1,0 +1,9 @@
+build/*
+coverage
+Gemfile.lock
+pkg
+tmp/*
+*.gem
+*.o
+*.so
+.clang_complete
