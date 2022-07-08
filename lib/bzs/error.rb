@@ -6,16 +6,15 @@ require "adsp"
 module BZS
   class BaseError < ::StandardError; end
 
-  # class AllocateError < BaseError; end
-  #
-  # class NotEnoughSourceBufferError       < BaseError; end
-  # class NotEnoughDestinationBufferError  < BaseError; end
-  # class DecompressorCorruptedSourceError < BaseError; end
-  # class CorruptedDictionaryError         < BaseError; end
-  #
-  # class AccessIOError < BaseError; end
-  # class ReadIOError   < BaseError; end
-  # class WriteIOError  < BaseError; end
+  class AllocateError < BaseError; end
+
+  class NotEnoughSourceBufferError       < BaseError; end
+  class NotEnoughDestinationBufferError  < BaseError; end
+  class DecompressorCorruptedSourceError < BaseError; end
+
+  class AccessIOError < BaseError; end
+  class ReadIOError   < BaseError; end
+  class WriteIOError  < BaseError; end
 
   ValidateError = ADSP::ValidateError
 
