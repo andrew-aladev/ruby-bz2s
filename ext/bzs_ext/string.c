@@ -202,11 +202,11 @@ static inline void* decompress_wrapper(void* data)
 {
   decompress_args_t* args = data;
 
-  args->stream_ptr->next_in  = *args->remaining_source_ptr;
-  args->stream_ptr->avail_in = *args->remaining_source_length_ptr;
+  args->stream_ptr->next_in  = (char *) *args->remaining_source_ptr;
+  args->stream_ptr->avail_in = bzs_consume_size(*args->remaining_source_length_ptr);
 
-  args->stream_ptr->next_out  = args->remaining_destination_buffer;
-  args->stream_ptr->avail_out = *args->remaining_destination_buffer_length_ptr;
+  args->stream_ptr->next_out  = (char *) args->remaining_destination_buffer;
+  args->stream_ptr->avail_out = bzs_consume_size(*args->remaining_destination_buffer_length_ptr);
 
   args->result = BZ2_bzDecompress(args->stream_ptr);
 
