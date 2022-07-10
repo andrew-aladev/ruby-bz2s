@@ -11,4 +11,6 @@
 typedef uint_fast8_t bzs_ext_result_t;
 typedef int          bzs_result_t;
 
+typedef uint8_t bzs_ext_byte_t;
+
 #endif // BZS_EXT_COMMON_H

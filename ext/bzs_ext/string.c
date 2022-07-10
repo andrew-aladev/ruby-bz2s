@@ -69,7 +69,7 @@ typedef struct
 //
 //   return NULL;
 // }
-//
+
 // static inline void* compressor_finish_wrapper(void* data)
 // {
 //   compressor_finish_args_t* args = data;
@@ -79,7 +79,7 @@ typedef struct
 //
 //   return NULL;
 // }
-//
+
 // #define BUFFERED_COMPRESS(gvl, wrapper, args)                                                                    \
 //   while (true) {                                                                                                 \
 //     lzws_ext_byte_t* remaining_destination_buffer =                                                              \
@@ -198,19 +198,22 @@ typedef struct
   bzs_result_t     result;
 } decompress_args_t;
 
-// static inline void* decompress_wrapper(void* data)
-// {
-//   decompress_args_t* args = data;
-//
-//   args->result = lzws_decompress(
-//     args->state_ptr,
-//     args->remaining_source_ptr,
-//     args->remaining_source_length_ptr,
-//     &args->remaining_destination_buffer,
-//     args->remaining_destination_buffer_length_ptr);
-//
-//   return NULL;
-// }
+static inline void* decompress_wrapper(void* data)
+{
+  decompress_args_t* args = data;
+
+  args->stream_ptr->next_in  = *args->remaining_source_ptr;
+  args->stream_ptr->avail_in = *args->remaining_source_length_ptr;
+
+  args->stream_ptr->next_out  = args->remaining_destination_buffer;
+  args->stream_ptr->avail_out = *args->remaining_destination_buffer_length_ptr;
+
+  args->result = BZ2_bzDecompress(args->stream_ptr);
+
+  // TODO
+
+  return NULL;
+}
 
 static inline bzs_ext_result_t decompress(
   bz_stream*  stream_ptr,
@@ -231,42 +234,42 @@ static inline bzs_ext_result_t decompress(
     .remaining_source_ptr        = &remaining_source,
     .remaining_source_length_ptr = &remaining_source_length};
 
-  // while (true) {
-  //   lzws_ext_byte_t* remaining_destination_buffer =
-  //     (lzws_ext_byte_t*) RSTRING_PTR(destination_value) + destination_length;
-  //   size_t prev_remaining_destination_buffer_length = remaining_destination_buffer_length;
-  //
-  //   args.remaining_destination_buffer            = remaining_destination_buffer;
-  //   args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;
-  //
-  //   LZWS_EXT_GVL_WRAP(gvl, decompress_wrapper, &args);
-  //   if (args.result != 0 && args.result != LZWS_DECOMPRESSOR_NEEDS_MORE_DESTINATION) {
-  //     switch (args.result) {
-  //       case LZWS_DECOMPRESSOR_INVALID_MAGIC_HEADER:
-  //       case LZWS_DECOMPRESSOR_INVALID_MAX_CODE_BIT_LENGTH:
-  //         return LZWS_EXT_ERROR_VALIDATE_FAILED;
-  //       case LZWS_DECOMPRESSOR_CORRUPTED_SOURCE:
-  //         return LZWS_EXT_ERROR_DECOMPRESSOR_CORRUPTED_SOURCE;
-  //       default:
-  //         return LZWS_EXT_ERROR_UNEXPECTED;
-  //     }
-  //   }
-  //
-  //   destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
-  //
-  //   if (args.result == LZWS_DECOMPRESSOR_NEEDS_MORE_DESTINATION) {
-  //     ext_result = increase_destination_buffer(
-  //       destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length);
-  //
-  //     if (ext_result != 0) {
-  //       return ext_result;
-  //     }
-  //
-  //     continue;
-  //   }
-  //
-  //   break;
-  // }
+  while (true) {
+    bzs_ext_byte_t* remaining_destination_buffer =
+      (bzs_ext_byte_t*) RSTRING_PTR(destination_value) + destination_length;
+    size_t prev_remaining_destination_buffer_length = remaining_destination_buffer_length;
+
+    args.remaining_destination_buffer            = remaining_destination_buffer;
+    args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;
+
+    BZS_EXT_GVL_WRAP(gvl, decompress_wrapper, &args);
+    // if (args.result != 0 && args.result != LZWS_DECOMPRESSOR_NEEDS_MORE_DESTINATION) {
+    //   switch (args.result) {
+    //     case LZWS_DECOMPRESSOR_INVALID_MAGIC_HEADER:
+    //     case LZWS_DECOMPRESSOR_INVALID_MAX_CODE_BIT_LENGTH:
+    //       return LZWS_EXT_ERROR_VALIDATE_FAILED;
+    //     case LZWS_DECOMPRESSOR_CORRUPTED_SOURCE:
+    //       return LZWS_EXT_ERROR_DECOMPRESSOR_CORRUPTED_SOURCE;
+    //     default:
+    //       return LZWS_EXT_ERROR_UNEXPECTED;
+    //   }
+    // }
+    //
+    // destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
+    //
+    // if (args.result == LZWS_DECOMPRESSOR_NEEDS_MORE_DESTINATION) {
+    //   ext_result = increase_destination_buffer(
+    //     destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length);
+    //
+    //   if (ext_result != 0) {
+    //     return ext_result;
+    //   }
+    //
+    //   continue;
+    // }
+
+    break;
+  }
 
   int exception;
 
