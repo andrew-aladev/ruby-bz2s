@@ -3,8 +3,7 @@
 
 #include "bzs_ext/buffer.h"
 #include "bzs_ext/io.h"
-#include "bzs_ext/stream/compressor.h"
-#include "bzs_ext/stream/decompressor.h"
+#include "bzs_ext/option.h"
 #include "bzs_ext/string.h"
 
 void Init_bzs_ext()
@@ -13,8 +12,7 @@ void Init_bzs_ext()
 
   bzs_ext_buffer_exports(root_module);
   bzs_ext_io_exports(root_module);
-  bzs_ext_compressor_exports(root_module);
-  bzs_ext_decompressor_exports(root_module);
+  bzs_ext_option_exports(root_module);
   bzs_ext_string_exports(root_module);
 
   VALUE version = rb_str_new2(BZS_VERSION_STRING);

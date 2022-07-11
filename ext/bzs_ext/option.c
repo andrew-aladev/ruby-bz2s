@@ -42,3 +42,24 @@ bzs_ext_option_t bzs_ext_get_int_option_value(VALUE options, const char* name)
 
   return get_int_value(raw_value);
 }
+
+void bzs_ext_option_exports(VALUE root_module)
+{
+  VALUE module = rb_define_module_under(root_module, "Option");
+
+  rb_define_const(module, "MIN_BLOCK_SIZE", SIZET2NUM(BZS_MIN_BLOCK_SIZE));
+  rb_define_const(module, "MAX_BLOCK_SIZE", SIZET2NUM(BZS_MAX_BLOCK_SIZE));
+  rb_define_const(module, "DEFAULT_BLOCK_SIZE", SIZET2NUM(BZS_DEFAULT_BLOCK_SIZE));
+
+  rb_define_const(module, "MIN_WORK_FACTOR", SIZET2NUM(BZS_MIN_WORK_FACTOR));
+  rb_define_const(module, "MAX_WORK_FACTOR", SIZET2NUM(BZS_MAX_WORK_FACTOR));
+  rb_define_const(module, "DEFAULT_WORK_FACTOR", SIZET2NUM(BZS_DEFAULT_WORK_FACTOR));
+
+  rb_define_const(module, "MIN_SMALL", SIZET2NUM(BZS_MIN_SMALL));
+  rb_define_const(module, "MAX_SMALL", SIZET2NUM(BZS_MAX_SMALL));
+  rb_define_const(module, "DEFAULT_SMALL", SIZET2NUM(BZS_DEFAULT_SMALL));
+
+  rb_define_const(module, "MIN_VERBOSITY", SIZET2NUM(BZS_MIN_VERBOSITY));
+  rb_define_const(module, "MAX_VERBOSITY", SIZET2NUM(BZS_MAX_VERBOSITY));
+  rb_define_const(module, "DEFAULT_VERBOSITY", SIZET2NUM(BZS_DEFAULT_VERBOSITY));
+}

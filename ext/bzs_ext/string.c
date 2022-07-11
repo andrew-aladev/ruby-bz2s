@@ -6,10 +6,12 @@
 #include "bzs_ext/string.h"
 
 #include "bzs_ext/buffer.h"
+#include "bzs_ext/common.h"
 #include "bzs_ext/error.h"
 #include "bzs_ext/gvl.h"
 #include "bzs_ext/macro.h"
 #include "bzs_ext/option.h"
+#include "bzs_ext/utils.h"
 
 // -- buffer --
 
@@ -177,7 +179,10 @@ VALUE bzs_ext_compress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, VA
   bzs_ext_result_t ext_result =
     compress(&stream, source, source_length, destination_value, destination_buffer_length, gvl);
 
-  BZ2_bzCompressEnd(&stream);
+  result = BZ2_bzCompressEnd(&stream);
+  if (result != BZ_OK) {
+    bzs_ext_raise_error(bzs_ext_get_error(result));
+  }
 
   if (ext_result != 0) {
     bzs_ext_raise_error(ext_result);
@@ -314,7 +319,10 @@ VALUE bzs_ext_decompress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, 
   bzs_ext_result_t ext_result =
     decompress(&stream, source, source_length, destination_value, destination_buffer_length, gvl);
 
-  BZ2_bzDecompressEnd(&stream);
+  result = BZ2_bzDecompressEnd(&stream);
+  if (result != BZ_OK) {
+    bzs_ext_raise_error(bzs_ext_get_error(result));
+  }
 
   if (ext_result != 0) {
     bzs_ext_raise_error(ext_result);

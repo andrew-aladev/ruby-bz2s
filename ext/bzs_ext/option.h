@@ -44,4 +44,6 @@ bzs_ext_option_t bzs_ext_get_int_option_value(VALUE options, const char* name);
   BZS_EXT_GET_BOOL_OPTION(options, small);        \
   BZS_EXT_GET_VERBOSITY_OPTION(options);
 
+void bzs_ext_option_exports(VALUE root_module);
+
 #endif // BZS_EXT_OPTIONS_H
