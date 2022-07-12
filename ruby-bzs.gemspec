@@ -1,5 +1,5 @@
 # Ruby bindings for bzip2 library.
-# Copyright (c) 2019 AUTHORS, MIT License.
+# Copyright (c) 2022 AUTHORS, MIT License.
 
 lib_path = File.expand_path "lib", __dir__
 $LOAD_PATH.unshift lib_path unless $LOAD_PATH.include? lib_path

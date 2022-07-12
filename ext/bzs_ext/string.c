@@ -1,5 +1,5 @@
 // Ruby bindings for bzip2 library.
-// Copyright (c) 2019 AUTHORS, MIT License.
+// Copyright (c) 2022 AUTHORS, MIT License.
 
 #include <bzlib.h>
 
@@ -43,6 +43,7 @@ static inline bzs_ext_result_t increase_destination_buffer(
 typedef struct
 {
   bz_stream*       stream_ptr;
+  int              stream_action;
   bzs_ext_byte_t** remaining_source_ptr;
   size_t*          remaining_source_length_ptr;
   bzs_ext_byte_t*  remaining_destination_buffer;
@@ -50,67 +51,57 @@ typedef struct
   bzs_result_t     result;
 } compress_args_t;
 
-// typedef struct
-// {
-//   lzws_compressor_state_t* state_ptr;
-//   lzws_ext_byte_t*         remaining_destination_buffer;
-//   size_t*                  remaining_destination_buffer_length_ptr;
-//   lzws_result_t            result;
-// } compressor_finish_args_t;
+static inline void* compress_wrapper(void* data)
+{
+  compress_args_t* args = data;
 
-// static inline void* compress_wrapper(void* data)
-// {
-//   compress_args_t* args = data;
-//
-//   args->result = lzws_compress(
-//     args->state_ptr,
-//     args->remaining_source_ptr,
-//     args->remaining_source_length_ptr,
-//     &args->remaining_destination_buffer,
-//     args->remaining_destination_buffer_length_ptr);
-//
-//   return NULL;
-// }
+  args->stream_ptr->next_in   = (char*) *args->remaining_source_ptr;
+  args->stream_ptr->avail_in  = bzs_consume_size(*args->remaining_source_length_ptr);
+  args->stream_ptr->next_out  = (char*) args->remaining_destination_buffer;
+  args->stream_ptr->avail_out = bzs_consume_size(*args->remaining_destination_buffer_length_ptr);
 
-// static inline void* compressor_finish_wrapper(void* data)
-// {
-//   compressor_finish_args_t* args = data;
-//
-//   args->result = lzws_compressor_finish(
-//     args->state_ptr, &args->remaining_destination_buffer, args->remaining_destination_buffer_length_ptr);
-//
-//   return NULL;
-// }
+  args->result = BZ2_bzCompress(args->stream_ptr, args->stream_action);
 
-// #define BUFFERED_COMPRESS(gvl, wrapper, args)                                                                    \
-//   while (true) {                                                                                                 \
-//     lzws_ext_byte_t* remaining_destination_buffer =                                                              \
-//       (lzws_ext_byte_t*) RSTRING_PTR(destination_value) + destination_length;                                    \
-//     size_t prev_remaining_destination_buffer_length = remaining_destination_buffer_length;                       \
-//                                                                                                                  \
-//     args.remaining_destination_buffer            = remaining_destination_buffer;                                 \
-//     args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;                         \
-//                                                                                                                  \
-//     LZWS_EXT_GVL_WRAP(gvl, wrapper, &args);                                                                      \
-//     if (args.result != 0 && args.result != LZWS_COMPRESSOR_NEEDS_MORE_DESTINATION) {                             \
-//       return LZWS_EXT_ERROR_UNEXPECTED;                                                                          \
-//     }                                                                                                            \
-//                                                                                                                  \
-//     destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;        \
-//                                                                                                                  \
-//     if (args.result == LZWS_COMPRESSOR_NEEDS_MORE_DESTINATION) {                                                 \
-//       ext_result = increase_destination_buffer(                                                                  \
-//         destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length); \
-//                                                                                                                  \
-//       if (ext_result != 0) {                                                                                     \
-//         return ext_result;                                                                                       \
-//       }                                                                                                          \
-//                                                                                                                  \
-//       continue;                                                                                                  \
-//     }                                                                                                            \
-//                                                                                                                  \
-//     break;                                                                                                       \
-//   }
+  *args->remaining_source_ptr                    = (bzs_ext_byte_t*) args->stream_ptr->next_in;
+  *args->remaining_source_length_ptr             = args->stream_ptr->avail_in;
+  *args->remaining_destination_buffer_length_ptr = args->stream_ptr->avail_out;
+
+  return NULL;
+}
+
+#define BUFFERED_COMPRESS(gvl, args)                                                                             \
+  while (true) {                                                                                                 \
+    bzs_ext_byte_t* remaining_destination_buffer =                                                               \
+      (bzs_ext_byte_t*) RSTRING_PTR(destination_value) + destination_length;                                     \
+    size_t prev_remaining_destination_buffer_length = remaining_destination_buffer_length;                       \
+                                                                                                                 \
+    args.remaining_destination_buffer            = remaining_destination_buffer;                                 \
+    args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;                         \
+                                                                                                                 \
+    BZS_EXT_GVL_WRAP(gvl, compress_wrapper, &args);                                                              \
+    if (                                                                                                         \
+      args.result != BZ_RUN_OK && args.result != BZ_FINISH_OK && args.result != BZ_PARAM_ERROR &&                \
+      args.result != BZ_STREAM_END) {                                                                            \
+      return bzs_ext_get_error(args.result);                                                                     \
+    }                                                                                                            \
+                                                                                                                 \
+    destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;        \
+                                                                                                                 \
+    if (args.result == BZ_PARAM_ERROR) {                                                                         \
+      ext_result = increase_destination_buffer(                                                                  \
+        destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length); \
+                                                                                                                 \
+      if (ext_result != 0) {                                                                                     \
+        return ext_result;                                                                                       \
+      }                                                                                                          \
+                                                                                                                 \
+      continue;                                                                                                  \
+    }                                                                                                            \
+                                                                                                                 \
+    if (args.result == BZ_STREAM_END) {                                                                          \
+      break;                                                                                                     \
+    }                                                                                                            \
+  }
 
 static inline bzs_ext_result_t compress(
   bz_stream*  stream_ptr,
@@ -128,13 +119,17 @@ static inline bzs_ext_result_t compress(
 
   compress_args_t args = {
     .stream_ptr                  = stream_ptr,
+    .stream_action               = BZ_RUN,
     .remaining_source_ptr        = &remaining_source,
     .remaining_source_length_ptr = &remaining_source_length};
+  BUFFERED_COMPRESS(gvl, args);
 
-  // BUFFERED_COMPRESS(gvl, compress_wrapper, args);
-  //
-  // compressor_finish_args_t finish_args = {.state_ptr = state_ptr};
-  // BUFFERED_COMPRESS(gvl, compressor_finish_wrapper, finish_args);
+  compress_args_t finish_args = {
+    .stream_ptr                  = stream_ptr,
+    .stream_action               = BZ_FINISH,
+    .remaining_source_ptr        = &remaining_source,
+    .remaining_source_length_ptr = &remaining_source_length};
+  BUFFERED_COMPRESS(gvl, finish_args);
 
   int exception;
 
@@ -207,15 +202,16 @@ static inline void* decompress_wrapper(void* data)
 {
   decompress_args_t* args = data;
 
-  args->stream_ptr->next_in  = (char *) *args->remaining_source_ptr;
-  args->stream_ptr->avail_in = bzs_consume_size(*args->remaining_source_length_ptr);
-
-  args->stream_ptr->next_out  = (char *) args->remaining_destination_buffer;
+  args->stream_ptr->next_in   = (char*) *args->remaining_source_ptr;
+  args->stream_ptr->avail_in  = bzs_consume_size(*args->remaining_source_length_ptr);
+  args->stream_ptr->next_out  = (char*) args->remaining_destination_buffer;
   args->stream_ptr->avail_out = bzs_consume_size(*args->remaining_destination_buffer_length_ptr);
 
   args->result = BZ2_bzDecompress(args->stream_ptr);
 
-  // TODO
+  *args->remaining_source_ptr                    = (bzs_ext_byte_t*) args->stream_ptr->next_in;
+  *args->remaining_source_length_ptr             = args->stream_ptr->avail_in;
+  *args->remaining_destination_buffer_length_ptr = args->stream_ptr->avail_out;
 
   return NULL;
 }
@@ -248,32 +244,26 @@ static inline bzs_ext_result_t decompress(
     args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;
 
     BZS_EXT_GVL_WRAP(gvl, decompress_wrapper, &args);
-    // if (args.result != 0 && args.result != LZWS_DECOMPRESSOR_NEEDS_MORE_DESTINATION) {
-    //   switch (args.result) {
-    //     case LZWS_DECOMPRESSOR_INVALID_MAGIC_HEADER:
-    //     case LZWS_DECOMPRESSOR_INVALID_MAX_CODE_BIT_LENGTH:
-    //       return LZWS_EXT_ERROR_VALIDATE_FAILED;
-    //     case LZWS_DECOMPRESSOR_CORRUPTED_SOURCE:
-    //       return LZWS_EXT_ERROR_DECOMPRESSOR_CORRUPTED_SOURCE;
-    //     default:
-    //       return LZWS_EXT_ERROR_UNEXPECTED;
-    //   }
-    // }
-    //
-    // destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
-    //
-    // if (args.result == LZWS_DECOMPRESSOR_NEEDS_MORE_DESTINATION) {
-    //   ext_result = increase_destination_buffer(
-    //     destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length);
-    //
-    //   if (ext_result != 0) {
-    //     return ext_result;
-    //   }
-    //
-    //   continue;
-    // }
+    if (args.result != BZ_PARAM_ERROR && args.result != BZ_STREAM_END && args.result != BZ_OK) {
+      return bzs_ext_get_error(args.result);
+    }
 
-    break;
+    destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
+
+    if (args.result == BZ_PARAM_ERROR) {
+      ext_result = increase_destination_buffer(
+        destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length);
+
+      if (ext_result != 0) {
+        return ext_result;
+      }
+
+      continue;
+    }
+
+    if (args.result == BZ_STREAM_END) {
+      break;
+    }
   }
 
   int exception;

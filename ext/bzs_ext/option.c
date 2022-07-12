@@ -1,5 +1,5 @@
 // Ruby bindings for bzip2 library.
-// Copyright (c) 2019 AUTHORS, MIT License.
+// Copyright (c) 2022 AUTHORS, MIT License.
 
 #include "bzs_ext/option.h"
 
@@ -29,6 +29,13 @@ static inline bzs_ext_option_t get_int_value(VALUE raw_value)
   return NUM2INT(raw_value);
 }
 
+static inline size_t get_size_value(VALUE raw_value)
+{
+  Check_Type(raw_value, T_FIXNUM);
+
+  return NUM2SIZET(raw_value);
+}
+
 bzs_ext_option_t bzs_ext_get_bool_option_value(VALUE options, const char* name)
 {
   VALUE raw_value = get_raw_value(options, name);
@@ -41,6 +48,13 @@ bzs_ext_option_t bzs_ext_get_int_option_value(VALUE options, const char* name)
   VALUE raw_value = get_raw_value(options, name);
 
   return get_int_value(raw_value);
+}
+
+size_t bzs_ext_get_size_option_value(VALUE options, const char* name)
+{
+  VALUE raw_value = get_raw_value(options, name);
+
+  return get_size_value(raw_value);
 }
 
 void bzs_ext_option_exports(VALUE root_module)

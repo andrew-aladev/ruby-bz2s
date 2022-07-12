@@ -1,5 +1,5 @@
 // Ruby bindings for bzip2 library.
-// Copyright (c) 2019 AUTHORS, MIT License.
+// Copyright (c) 2022 AUTHORS, MIT License.
 
 #include "bzs_ext/buffer.h"
 
