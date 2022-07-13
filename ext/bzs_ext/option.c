@@ -12,17 +12,19 @@ static inline VALUE get_raw_value(VALUE options, const char* name)
   return rb_funcall(options, rb_intern("[]"), 1, ID2SYM(rb_intern(name)));
 }
 
-static inline bzs_ext_option_t get_bool_value(VALUE raw_value)
+// -- getters --
+
+static inline bool get_bool_value(VALUE raw_value)
 {
   int raw_type = TYPE(raw_value);
   if (raw_type != T_TRUE && raw_type != T_FALSE) {
     bzs_ext_raise_error(BZS_EXT_ERROR_VALIDATE_FAILED);
   }
 
-  return raw_type == T_TRUE ? 1 : 0;
+  return raw_type == T_TRUE;
 }
 
-static inline bzs_ext_option_t get_int_value(VALUE raw_value)
+static inline int get_int_value(VALUE raw_value)
 {
   Check_Type(raw_value, T_FIXNUM);
 
@@ -36,18 +38,11 @@ static inline size_t get_size_value(VALUE raw_value)
   return NUM2SIZET(raw_value);
 }
 
-bzs_ext_option_t bzs_ext_get_bool_option_value(VALUE options, const char* name)
+bool bzs_ext_get_bool_option_value(VALUE options, const char* name)
 {
   VALUE raw_value = get_raw_value(options, name);
 
   return get_bool_value(raw_value);
-}
-
-bzs_ext_option_t bzs_ext_get_int_option_value(VALUE options, const char* name)
-{
-  VALUE raw_value = get_raw_value(options, name);
-
-  return get_int_value(raw_value);
 }
 
 size_t bzs_ext_get_size_option_value(VALUE options, const char* name)
@@ -56,6 +51,30 @@ size_t bzs_ext_get_size_option_value(VALUE options, const char* name)
 
   return get_size_value(raw_value);
 }
+
+// -- resolves --
+
+bzs_ext_option_t bzs_ext_resolve_bool_option_value(VALUE options, const char* name, bzs_ext_option_t default_value)
+{
+  VALUE raw_value = get_raw_value(options, name);
+  if (raw_value != Qnil) {
+    return get_bool_value(raw_value);
+  } else {
+    return default_value;
+  }
+}
+
+bzs_ext_option_t bzs_ext_resolve_int_option_value(VALUE options, const char* name, bzs_ext_option_t default_value)
+{
+  VALUE raw_value = get_raw_value(options, name);
+  if (raw_value != Qnil) {
+    return get_int_value(raw_value);
+  } else {
+    return default_value;
+  }
+}
+
+// -- others --
 
 void bzs_ext_option_exports(VALUE root_module)
 {

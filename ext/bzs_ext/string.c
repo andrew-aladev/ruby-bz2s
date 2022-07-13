@@ -147,11 +147,11 @@ VALUE bzs_ext_compress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, VA
   Check_Type(options, T_HASH);
   BZS_EXT_GET_SIZE_OPTION(options, destination_buffer_length);
   BZS_EXT_GET_BOOL_OPTION(options, gvl);
-  BZS_EXT_GET_COMPRESSOR_OPTIONS(options);
+  BZS_EXT_RESOLVE_COMPRESSOR_OPTIONS(options);
 
   bz_stream stream;
 
-  bzs_result_t result = BZ2_bzCompressInit(&stream, blockSize, verbosity, workFactor);
+  bzs_result_t result = BZ2_bzCompressInit(&stream, block_size, verbosity, work_factor);
   if (result != BZ_OK) {
     bzs_ext_raise_error(bzs_ext_get_error(result));
   }
@@ -282,7 +282,7 @@ VALUE bzs_ext_decompress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, 
   Check_Type(options, T_HASH);
   BZS_EXT_GET_SIZE_OPTION(options, destination_buffer_length);
   BZS_EXT_GET_BOOL_OPTION(options, gvl);
-  BZS_EXT_GET_DECOMPRESSOR_OPTIONS(options);
+  BZS_EXT_RESOLVE_DECOMPRESSOR_OPTIONS(options);
 
   bz_stream stream;
 

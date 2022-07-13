@@ -40,8 +40,8 @@ module BZS
     # Option: +:source_buffer_length+ source buffer length.
     # Option: +:destination_buffer_length+ destination buffer length.
     # Option: +:gvl+ enables global VM lock where possible.
-    # Option: +:blockSize+ block size to be used for compression.
-    # Option: +:workFactor+ controls threshold for switching from standard to fallback algorithm.
+    # Option: +:block_size+ block size to be used for compression.
+    # Option: +:work_factor+ controls threshold for switching from standard to fallback algorithm.
     # Option: +:quiet+ disables bzip2 library logging.
     # Returns processed compressor options.
     def self.get_compressor_options(options, buffer_length_names)
