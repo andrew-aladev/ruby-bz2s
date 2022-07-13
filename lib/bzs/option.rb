@@ -15,24 +15,24 @@ module BZS
     # Current compressor defaults.
     COMPRESSOR_DEFAULTS = {
       # Enables global VM lock where possible.
-      :gvl                  => false,
+      :gvl         => false,
       # Block size to be used for compression.
-      :block_size           => nil,
+      :block_size  => nil,
       # Controls threshold for switching from standard to fallback algorithm.
-      :work_factor          => nil,
+      :work_factor => nil,
       # Disables bzip2 library logging.
-      :quiet                => nil
+      :quiet       => nil
     }
     .freeze
 
     # Current decompressor defaults.
     DECOMPRESSOR_DEFAULTS = {
       # Enables global VM lock where possible.
-      :gvl                  => false,
+      :gvl   => false,
       # Enables alternative decompression algorithm with less memory.
-      :small                => nil,
+      :small => nil,
       # Disables bzip2 library logging.
-      :quiet                => nil
+      :quiet => nil
     }
     .freeze
 
@@ -58,10 +58,10 @@ module BZS
       Validation.validate_bool options[:gvl]
 
       block_size = options[:block_size]
-      Validation.validate_positive_integer block_size unless block_size.nil?
+      Validation.validate_not_negative_integer block_size unless block_size.nil?
 
       work_factor = options[:work_factor]
-      Validation.validate_positive_integer work_factor unless work_factor.nil?
+      Validation.validate_not_negative_integer work_factor unless work_factor.nil?
 
       quiet = options[:quiet]
       Validation.validate_bool quiet unless quiet.nil?

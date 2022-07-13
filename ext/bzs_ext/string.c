@@ -80,14 +80,14 @@ static inline void* compress_wrapper(void* data)
                                                                                                                  \
     BZS_EXT_GVL_WRAP(gvl, compress_wrapper, &args);                                                              \
     if (                                                                                                         \
-      args.result != BZ_RUN_OK && args.result != BZ_FINISH_OK && args.result != BZ_PARAM_ERROR &&                \
-      args.result != BZ_STREAM_END) {                                                                            \
+      args.result != BZ_OK && args.result != BZ_RUN_OK && args.result != BZ_FINISH_OK &&                         \
+      args.result != BZ_STREAM_END && args.result != BZ_PARAM_ERROR) {                                           \
       return bzs_ext_get_error(args.result);                                                                     \
     }                                                                                                            \
                                                                                                                  \
     destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;        \
                                                                                                                  \
-    if (args.result == BZ_PARAM_ERROR) {                                                                         \
+    if (args.result == BZ_PARAM_ERROR && source_length != 0) {                                                   \
       ext_result = increase_destination_buffer(                                                                  \
         destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length); \
                                                                                                                  \
@@ -98,9 +98,7 @@ static inline void* compress_wrapper(void* data)
       continue;                                                                                                  \
     }                                                                                                            \
                                                                                                                  \
-    if (args.result == BZ_STREAM_END) {                                                                          \
-      break;                                                                                                     \
-    }                                                                                                            \
+    break;                                                                                                       \
   }
 
 static inline bzs_ext_result_t compress(
@@ -149,7 +147,11 @@ VALUE bzs_ext_compress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, VA
   BZS_EXT_GET_BOOL_OPTION(options, gvl);
   BZS_EXT_RESOLVE_COMPRESSOR_OPTIONS(options);
 
-  bz_stream stream;
+  bz_stream stream = {
+    .bzalloc = NULL,
+    .bzfree  = NULL,
+    .opaque  = NULL,
+  };
 
   bzs_result_t result = BZ2_bzCompressInit(&stream, block_size, verbosity, work_factor);
   if (result != BZ_OK) {
@@ -176,7 +178,7 @@ VALUE bzs_ext_compress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, VA
 
   result = BZ2_bzCompressEnd(&stream);
   if (result != BZ_OK) {
-    bzs_ext_raise_error(bzs_ext_get_error(result));
+    ext_result = bzs_ext_get_error(result);
   }
 
   if (ext_result != 0) {
@@ -244,13 +246,13 @@ static inline bzs_ext_result_t decompress(
     args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;
 
     BZS_EXT_GVL_WRAP(gvl, decompress_wrapper, &args);
-    if (args.result != BZ_PARAM_ERROR && args.result != BZ_STREAM_END && args.result != BZ_OK) {
+    if (args.result != BZ_OK && args.result != BZ_STREAM_END && args.result != BZ_PARAM_ERROR) {
       return bzs_ext_get_error(args.result);
     }
 
     destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
 
-    if (args.result == BZ_PARAM_ERROR) {
+    if (args.result == BZ_PARAM_ERROR && source_length != 0) {
       ext_result = increase_destination_buffer(
         destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length);
 
@@ -261,9 +263,7 @@ static inline bzs_ext_result_t decompress(
       continue;
     }
 
-    if (args.result == BZ_STREAM_END) {
-      break;
-    }
+    break;
   }
 
   int exception;
@@ -284,7 +284,11 @@ VALUE bzs_ext_decompress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, 
   BZS_EXT_GET_BOOL_OPTION(options, gvl);
   BZS_EXT_RESOLVE_DECOMPRESSOR_OPTIONS(options);
 
-  bz_stream stream;
+  bz_stream stream = {
+    .bzalloc = NULL,
+    .bzfree  = NULL,
+    .opaque  = NULL,
+  };
 
   bzs_result_t result = BZ2_bzDecompressInit(&stream, verbosity, small);
   if (result != BZ_OK) {
@@ -311,7 +315,7 @@ VALUE bzs_ext_decompress_string(VALUE BZS_EXT_UNUSED(self), VALUE source_value, 
 
   result = BZ2_bzDecompressEnd(&stream);
   if (result != BZ_OK) {
-    bzs_ext_raise_error(bzs_ext_get_error(result));
+    ext_result = bzs_ext_get_error(result);
   }
 
   if (ext_result != 0) {

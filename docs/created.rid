@@ -1,7 +1,7 @@
-Tue, 12 Jul 2022 19:23:01 +0300
-lib/bzs.rb	Tue, 12 Jul 2022 17:41:37 +0300
+Wed, 13 Jul 2022 12:08:30 +0300
+lib/bzs.rb	Wed, 13 Jul 2022 12:07:00 +0300
 lib/bzs/error.rb	Tue, 12 Jul 2022 17:41:41 +0300
-lib/bzs/option.rb	Tue, 12 Jul 2022 18:36:35 +0300
+lib/bzs/option.rb	Wed, 13 Jul 2022 12:08:11 +0300
 lib/bzs/string.rb	Tue, 12 Jul 2022 18:16:02 +0300
 lib/bzs/validation.rb	Tue, 12 Jul 2022 18:38:03 +0300
 lib/bzs/version.rb	Tue, 12 Jul 2022 17:41:46 +0300

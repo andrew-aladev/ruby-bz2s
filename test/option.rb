@@ -9,11 +9,20 @@ require_relative "validation"
 module BZS
   module Test
     module Option
-      INVALID_MAX_CODE_BIT_LENGTHS = (
-        Validation::INVALID_POSITIVE_INTEGERS - [nil] +
+      INVALID_BLOCK_SIZES = (
+        Validation::INVALID_NOT_NEGATIVE_INTEGERS - [nil] +
         [
-          LZWS::Option::LOWEST_MAX_CODE_BIT_LENGTH - 1,
-          LZWS::Option::BIGGEST_MAX_CODE_BIT_LENGTH + 1
+          BZS::Option::MIN_BLOCK_SIZE - 1,
+          BZS::Option::MAX_BLOCK_SIZE + 1
+        ]
+      )
+      .freeze
+
+      INVALID_WORK_FACTORS = (
+        Validation::INVALID_NOT_NEGATIVE_INTEGERS - [nil] +
+        [
+          BZS::Option::MIN_WORK_FACTOR - 1,
+          BZS::Option::MAX_WORK_FACTOR + 1
         ]
       )
       .freeze
@@ -32,32 +41,44 @@ module BZS
         end
 
         (Validation::INVALID_BOOLS - [nil]).each do |invalid_bool|
-          yield({ :without_magic_header => invalid_bool })
-          yield({ :msb                  => invalid_bool })
-          yield({ :unaligned_bit_groups => invalid_bool })
-          yield({ :quiet                => invalid_bool })
+          yield({ :small => invalid_bool })
+          yield({ :quiet => invalid_bool })
         end
       end
 
       def self.get_invalid_compressor_options(buffer_length_names, &block)
-        get_invalid_decompressor_options buffer_length_names, &block
+        Validation::INVALID_HASHES.each(&block)
 
-        INVALID_MAX_CODE_BIT_LENGTHS.each do |invalid_max_code_bit_length|
-          yield({ :max_code_bit_length => invalid_max_code_bit_length })
+        buffer_length_names.each do |name|
+          (Validation::INVALID_NOT_NEGATIVE_INTEGERS - [nil]).each do |invalid_integer|
+            yield({ name => invalid_integer })
+          end
+        end
+
+        Validation::INVALID_BOOLS.each do |invalid_bool|
+          yield({ :gvl => invalid_bool })
+        end
+
+        INVALID_BLOCK_SIZES.each do |invalid_block_size|
+          yield({ :block_size => invalid_block_size })
+        end
+
+        INVALID_WORK_FACTORS.each do |invalid_work_factor|
+          yield({ :work_factor => invalid_work_factor })
         end
 
         (Validation::INVALID_BOOLS - [nil]).each do |invalid_bool|
-          yield({ :block_mode => invalid_bool })
+          yield({ :quiet => invalid_bool })
         end
       end
 
       # -----
 
       # "0" means default buffer length.
-      # "2" bytes is the minimal buffer length for compressor and decompressor.
+      # "1" bytes is the minimal buffer length for compressor and decompressor.
       BUFFER_LENGTHS = [
         0,
-        2
+        1
       ]
       .freeze
 
@@ -67,9 +88,15 @@ module BZS
       ]
       .freeze
 
-      MAX_CODE_BIT_LENGTHS = Range.new(
-        LZWS::Option::LOWEST_MAX_CODE_BIT_LENGTH,
-        LZWS::Option::BIGGEST_MAX_CODE_BIT_LENGTH
+      BLOCK_SIZES = Range.new(
+        BZS::Option::MIN_BLOCK_SIZE,
+        BZS::Option::MAX_BLOCK_SIZE
+      )
+      .freeze
+
+      WORK_FACTORS = Range.new(
+        BZS::Option::MIN_WORK_FACTOR,
+        BZS::Option::MAX_WORK_FACTOR
       )
       .freeze
 
@@ -85,9 +112,8 @@ module BZS
         # main
 
         main_generator = OCG.new(
-          :max_code_bit_length  => MAX_CODE_BIT_LENGTHS,
-          :block_mode           => BOOLS,
-          :unaligned_bit_groups => BOOLS
+          :block_size  => BLOCK_SIZES,
+          :work_factor => WORK_FACTORS
         )
 
         # thread
@@ -99,12 +125,6 @@ module BZS
         # other
 
         other_generator = OCG.new(
-          :without_magic_header => BOOLS
-        )
-        .mix(
-          :msb => BOOLS
-        )
-        .mix(
           :quiet => BOOLS
         )
 
@@ -115,16 +135,21 @@ module BZS
 
       def self.get_compatible_decompressor_options(compressor_options, buffer_length_name_mapping, &_block)
         decompressor_options = {
-          :without_magic_header => compressor_options[:without_magic_header],
-          :msb                  => compressor_options[:msb],
-          :unaligned_bit_groups => compressor_options[:unaligned_bit_groups]
+          :gvl   => compressor_options[:gvl],
+          :quiet => compressor_options[:quiet]
         }
 
         buffer_length_name_mapping.each do |compressor_name, decompressor_name|
           decompressor_options[decompressor_name] = compressor_options[compressor_name]
         end
 
-        yield decompressor_options
+        other_generator = OCG.new(
+          :small => BOOLS
+        )
+
+        other_generator.each do |other_options|
+          yield decompressor_options.merge(other_options)
+        end
       end
     end
   end

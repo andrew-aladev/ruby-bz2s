@@ -48,7 +48,7 @@ bzs_ext_option_t bzs_ext_resolve_int_option_value(VALUE options, const char* nam
   BZS_EXT_RESOLVE_BOOL_OPTION(options, quiet, BZS_DEFAULT_QUIET); \
   bzs_ext_option_t verbosity = quiet ? BZS_MIN_VERBOSITY : BZS_MAX_VERBOSITY;
 
-#define BZS_EXT_RESOLVE_COMPRESSOR_OPTIONS(options)                         \
+#define BZS_EXT_RESOLVE_COMPRESSOR_OPTIONS(options)                          \
   BZS_EXT_RESOLVE_INT_OPTION(options, block_size, BZS_DEFAULT_BLOCK_SIZE);   \
   BZS_EXT_RESOLVE_INT_OPTION(options, work_factor, BZS_DEFAULT_WORK_FACTOR); \
   BZS_EXT_RESOLVE_VERBOSITY_OPTION(options);
