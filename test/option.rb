@@ -75,10 +75,10 @@ module BZS
       # -----
 
       # "0" means default buffer length.
-      # "1" bytes is the minimal buffer length for compressor and decompressor.
+      # "512" bytes is the minimal buffer length for compressor and decompressor.
       BUFFER_LENGTHS = [
         0,
-        1
+        512
       ]
       .freeze
 

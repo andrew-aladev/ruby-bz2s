@@ -69,7 +69,7 @@ static inline void* compress_wrapper(void* data)
   return NULL;
 }
 
-#define BUFFERED_COMPRESS(gvl, args, RUN_OK, RUN_END)                                                            \
+#define BUFFERED_COMPRESS(gvl, args, RUN_OK)                                                                     \
   while (true) {                                                                                                 \
     bzs_ext_byte_t* remaining_destination_buffer =                                                               \
       (bzs_ext_byte_t*) RSTRING_PTR(destination_value) + destination_length;                                     \
@@ -79,19 +79,17 @@ static inline void* compress_wrapper(void* data)
     args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;                         \
                                                                                                                  \
     BZS_EXT_GVL_WRAP(gvl, compress_wrapper, &args);                                                              \
-    if (                                                                                                         \
-      args.result != RUN_OK && args.result != RUN_END && args.result != BZ_PARAM_ERROR &&                        \
-      args.result != BZ_STREAM_END) {                                                                            \
+    if (args.result != RUN_OK && args.result != BZ_PARAM_ERROR && args.result != BZ_STREAM_END) {                \
       return bzs_ext_get_error(args.result);                                                                     \
     }                                                                                                            \
                                                                                                                  \
     destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;        \
                                                                                                                  \
-    if (args.result == BZ_PARAM_ERROR) {                                                                         \
-      if (prev_remaining_destination_buffer_length == remaining_destination_buffer_length) {                     \
-        break;                                                                                                   \
-      }                                                                                                          \
+    if (args.result == BZ_STREAM_END) {                                                                          \
+      break;                                                                                                     \
+    }                                                                                                            \
                                                                                                                  \
+    if (remaining_source_length != 0 || remaining_destination_buffer_length == 0) {                              \
       ext_result = increase_destination_buffer(                                                                  \
         destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length); \
                                                                                                                  \
@@ -102,9 +100,7 @@ static inline void* compress_wrapper(void* data)
       continue;                                                                                                  \
     }                                                                                                            \
                                                                                                                  \
-    if (args.result == RUN_END) {                                                                                \
-      break;                                                                                                     \
-    }                                                                                                            \
+    break;                                                                                                       \
   }
 
 static inline bzs_ext_result_t compress(
@@ -126,14 +122,14 @@ static inline bzs_ext_result_t compress(
     .stream_action               = BZ_RUN,
     .remaining_source_ptr        = &remaining_source,
     .remaining_source_length_ptr = &remaining_source_length};
-  BUFFERED_COMPRESS(gvl, run_args, BZ_RUN_OK, BZ_RUN_OK);
+  BUFFERED_COMPRESS(gvl, run_args, BZ_RUN_OK);
 
   compress_args_t finish_args = {
     .stream_ptr                  = stream_ptr,
     .stream_action               = BZ_FINISH,
     .remaining_source_ptr        = &remaining_source,
     .remaining_source_length_ptr = &remaining_source_length};
-  BUFFERED_COMPRESS(gvl, finish_args, BZ_FINISH_OK, BZ_STREAM_END);
+  BUFFERED_COMPRESS(gvl, finish_args, BZ_FINISH_OK);
 
   int exception;
 
@@ -258,11 +254,11 @@ static inline bzs_ext_result_t decompress(
 
     destination_length += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
 
-    if (args.result == BZ_PARAM_ERROR) {
-      if (prev_remaining_destination_buffer_length == remaining_destination_buffer_length) {
-        break;
-      }
+    if (args.result == BZ_STREAM_END) {
+      break;
+    }
 
+    if (remaining_source_length != 0 || remaining_destination_buffer_length == 0) {
       ext_result = increase_destination_buffer(
         destination_value, destination_length, &remaining_destination_buffer_length, destination_buffer_length);
 
@@ -273,9 +269,7 @@ static inline bzs_ext_result_t decompress(
       continue;
     }
 
-    if (args.result == BZ_STREAM_END) {
-      break;
-    }
+    break;
   }
 
   int exception;
