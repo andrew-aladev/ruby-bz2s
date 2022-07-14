@@ -24,6 +24,8 @@ require_header(
     BZ_RUN_OK
     BZ_FINISH
     BZ_FINISH_OK
+    BZ_FLUSH
+    BZ_FLUSH_OK
     BZ_OK
     BZ_PARAM_ERROR
     BZ_STREAM_END
