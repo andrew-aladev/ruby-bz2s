@@ -1,9 +1,9 @@
 // Ruby bindings for bzip2 library.
 // Copyright (c) 2022 AUTHORS, MIT License.
 
-#include <bzlib.h>
-
 #include "bzs_ext/string.h"
+
+#include <bzlib.h>
 
 #include "bzs_ext/buffer.h"
 #include "bzs_ext/common.h"

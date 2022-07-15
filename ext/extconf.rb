@@ -65,6 +65,7 @@ dir_config extension_name
 $srcs = %w[
   buffer
   error
+  io
   main
   option
   string
