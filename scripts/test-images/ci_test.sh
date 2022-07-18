@@ -17,7 +17,7 @@ if [ ! -d "$DIR" ]; then
 
   git clone "https://github.com/andrew-aladev/ruby-bzs.git" \
     --single-branch \
-    --branch "master" \
+    --branch "main" \
     --depth 1 \
     "$DIR"
 fi
