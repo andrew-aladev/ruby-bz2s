@@ -125,7 +125,7 @@ module BZS
         # other
 
         other_generator = OCG.new(
-          :quiet => BOOLS
+          :quiet => [true]
         )
 
         # complete

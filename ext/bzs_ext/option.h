@@ -25,7 +25,7 @@
 #define BZS_MAX_VERBOSITY     4
 #define BZS_DEFAULT_VERBOSITY BZS_MIN_VERBOSITY
 
-#define BZS_DEFAULT_QUIET 0
+#define BZS_DEFAULT_QUIET 1
 
 // Bzip2 options are integers instead of unsigned integers.
 typedef int bzs_ext_option_t;

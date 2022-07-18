@@ -3,9 +3,13 @@
 
 #include "bzs_ext/stream/decompressor.h"
 
+#include <stdlib.h>
+
+#include "bzs_ext/buffer.h"
 #include "bzs_ext/error.h"
 #include "bzs_ext/gvl.h"
 #include "bzs_ext/option.h"
+#include "bzs_ext/utils.h"
 
 // -- initialization --
 
@@ -55,6 +59,10 @@ VALUE bzs_ext_initialize_decompressor(VALUE self, VALUE options)
     bzs_ext_raise_error(BZS_EXT_ERROR_ALLOCATE_FAILED);
   }
 
+  stream_ptr->bzalloc = NULL;
+  stream_ptr->bzfree  = NULL;
+  stream_ptr->opaque  = NULL;
+
   bzs_result_t result = BZ2_bzDecompressInit(stream_ptr, verbosity, small);
   if (result != BZ_OK) {
     free(stream_ptr);
@@ -88,54 +96,66 @@ VALUE bzs_ext_initialize_decompressor(VALUE self, VALUE options)
     bzs_ext_raise_error(BZS_EXT_ERROR_USED_AFTER_CLOSE);                                      \
   }
 
-// typedef struct
-// {
-//   zstds_ext_decompressor_t* decompressor_ptr;
-//   ZSTD_inBuffer*            in_buffer_ptr;
-//   ZSTD_outBuffer*           out_buffer_ptr;
-//   zstds_result_t            result;
-// } decompress_args_t;
+typedef struct
+{
+  bz_stream*       stream_ptr;
+  bzs_ext_byte_t** remaining_source_ptr;
+  size_t*          remaining_source_length_ptr;
+  bzs_ext_byte_t** remaining_destination_buffer_ptr;
+  size_t*          remaining_destination_buffer_length_ptr;
+  bzs_result_t     result;
+} decompress_args_t;
 
-// static inline void* decompress_wrapper(void* data)
-// {
-//   decompress_args_t* args = data;
-//
-//   args->result = ZSTD_decompressStream(args->decompressor_ptr->ctx, args->out_buffer_ptr, args->in_buffer_ptr);
-//
-//   return NULL;
-// }
+static inline void* decompress_wrapper(void* data)
+{
+  decompress_args_t* args = data;
 
-// VALUE zstds_ext_decompress(VALUE self, VALUE source_value)
-// {
-//   GET_DECOMPRESSOR(self);
-//   DO_NOT_USE_AFTER_CLOSE(decompressor_ptr);
-//   Check_Type(source_value, T_STRING);
-//
-//   const char* source        = RSTRING_PTR(source_value);
-//   size_t      source_length = RSTRING_LEN(source_value);
-//
-//   ZSTD_inBuffer  in_buffer  = {.src = source, .size = source_length, .pos = 0};
-//   ZSTD_outBuffer out_buffer = {
-//     .dst  = decompressor_ptr->remaining_destination_buffer,
-//     .size = decompressor_ptr->remaining_destination_buffer_length,
-//     .pos  = 0};
-//
-//   decompress_args_t args = {
-//     .decompressor_ptr = decompressor_ptr, .in_buffer_ptr = &in_buffer, .out_buffer_ptr = &out_buffer};
-//
-//   ZSTDS_EXT_GVL_WRAP(decompressor_ptr->gvl, decompress_wrapper, &args);
-//   if (ZSTD_isError(args.result)) {
-//     zstds_ext_raise_error(zstds_ext_get_error(ZSTD_getErrorCode(args.result)));
-//   }
-//
-//   decompressor_ptr->remaining_destination_buffer += out_buffer.pos;
-//   decompressor_ptr->remaining_destination_buffer_length -= out_buffer.pos;
-//
-//   VALUE bytes_read             = SIZET2NUM(in_buffer.pos);
-//   VALUE needs_more_destination = decompressor_ptr->remaining_destination_buffer_length == 0 ? Qtrue : Qfalse;
-//
-//   return rb_ary_new_from_args(2, bytes_read, needs_more_destination);
-// }
+  args->stream_ptr->next_in   = (char*) *args->remaining_source_ptr;
+  args->stream_ptr->avail_in  = bzs_consume_size(*args->remaining_source_length_ptr);
+  args->stream_ptr->next_out  = (char*) *args->remaining_destination_buffer_ptr;
+  args->stream_ptr->avail_out = bzs_consume_size(*args->remaining_destination_buffer_length_ptr);
+
+  args->result = BZ2_bzDecompress(args->stream_ptr);
+
+  *args->remaining_source_ptr                    = (bzs_ext_byte_t*) args->stream_ptr->next_in;
+  *args->remaining_source_length_ptr             = args->stream_ptr->avail_in;
+  *args->remaining_destination_buffer_ptr        = (bzs_ext_byte_t*) args->stream_ptr->next_out;
+  *args->remaining_destination_buffer_length_ptr = args->stream_ptr->avail_out;
+
+  return NULL;
+}
+
+VALUE bzs_ext_decompress(VALUE self, VALUE source_value)
+{
+  GET_DECOMPRESSOR(self);
+  DO_NOT_USE_AFTER_CLOSE(decompressor_ptr);
+  Check_Type(source_value, T_STRING);
+
+  const char*     source                  = RSTRING_PTR(source_value);
+  size_t          source_length           = RSTRING_LEN(source_value);
+  bzs_ext_byte_t* remaining_source        = (bzs_ext_byte_t*) source;
+  size_t          remaining_source_length = source_length;
+
+  decompress_args_t args = {
+    .stream_ptr                              = decompressor_ptr->stream_ptr,
+    .remaining_source_ptr                    = &remaining_source,
+    .remaining_source_length_ptr             = &remaining_source_length,
+    .remaining_destination_buffer_ptr        = &decompressor_ptr->remaining_destination_buffer,
+    .remaining_destination_buffer_length_ptr = &decompressor_ptr->remaining_destination_buffer_length};
+
+  BZS_EXT_GVL_WRAP(decompressor_ptr->gvl, decompress_wrapper, &args);
+  if (args.result != BZ_OK && args.result != BZ_PARAM_ERROR && args.result != BZ_STREAM_END) {
+    bzs_ext_raise_error(bzs_ext_get_error(args.result));
+  }
+
+  VALUE bytes_read             = SIZET2NUM(source_length - remaining_source_length);
+  VALUE needs_more_destination = args.result == BZ_OK && (remaining_source_length != 0 ||
+                                                          decompressor_ptr->remaining_destination_buffer_length == 0) ?
+                                   Qtrue :
+                                   Qfalse;
+
+  return rb_ary_new_from_args(2, bytes_read, needs_more_destination);
+}
 
 // -- other --
 
