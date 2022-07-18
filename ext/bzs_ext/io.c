@@ -129,10 +129,6 @@ static inline bzs_ext_result_t read_more_source(
     while (true) {                                                                                              \
       ext_result = read_more_source(source_file, &source, &source_length, source_buffer, source_buffer_length); \
       if (ext_result == BZS_EXT_FILE_READ_FINISHED) {                                                           \
-        if (source_length != 0) {                                                                               \
-          /* Bzip2 won't provide any remainder by design. */                                                    \
-          return BZS_EXT_ERROR_READ_IO;                                                                         \
-        }                                                                                                       \
         break;                                                                                                  \
       } else if (ext_result != 0) {                                                                             \
         return ext_result;                                                                                      \
@@ -205,34 +201,72 @@ static inline bzs_ext_result_t
 
 // -- buffered compress --
 
-// typedef struct
-// {
-//   bz_stream*       stream_ptr;
-//   int              stream_action;
-//   bzs_ext_byte_t** remaining_source_ptr;
-//   size_t*          remaining_source_length_ptr;
-//   bzs_ext_byte_t*  remaining_destination_buffer;
-//   size_t*          remaining_destination_buffer_length_ptr;
-//   bzs_result_t     result;
-// } compress_args_t;
+typedef struct
+{
+  bz_stream*       stream_ptr;
+  int              stream_action;
+  bzs_ext_byte_t** remaining_source_ptr;
+  size_t*          remaining_source_length_ptr;
+  bzs_ext_byte_t*  remaining_destination_buffer;
+  size_t*          remaining_destination_buffer_length_ptr;
+  bzs_result_t     result;
+} compress_args_t;
 
-// static inline void* compress_wrapper(void* data)
-// {
-//   compress_args_t* args = data;
-//
-//   args->stream_ptr->next_in   = (char*) *args->remaining_source_ptr;
-//   args->stream_ptr->avail_in  = bzs_consume_size(*args->remaining_source_length_ptr);
-//   args->stream_ptr->next_out  = (char*) args->remaining_destination_buffer;
-//   args->stream_ptr->avail_out = bzs_consume_size(*args->remaining_destination_buffer_length_ptr);
-//
-//   args->result = BZ2_bzCompress(args->stream_ptr, args->stream_action);
-//
-//   *args->remaining_source_ptr                    = (bzs_ext_byte_t*) args->stream_ptr->next_in;
-//   *args->remaining_source_length_ptr             = args->stream_ptr->avail_in;
-//   *args->remaining_destination_buffer_length_ptr = args->stream_ptr->avail_out;
-//
-//   return NULL;
-// }
+static inline void* compress_wrapper(void* data)
+{
+  compress_args_t* args = data;
+
+  args->stream_ptr->next_in   = (char*) *args->remaining_source_ptr;
+  args->stream_ptr->avail_in  = bzs_consume_size(*args->remaining_source_length_ptr);
+  args->stream_ptr->next_out  = (char*) args->remaining_destination_buffer;
+  args->stream_ptr->avail_out = bzs_consume_size(*args->remaining_destination_buffer_length_ptr);
+
+  args->result = BZ2_bzCompress(args->stream_ptr, args->stream_action);
+
+  *args->remaining_source_ptr                    = (bzs_ext_byte_t*) args->stream_ptr->next_in;
+  *args->remaining_source_length_ptr             = args->stream_ptr->avail_in;
+  *args->remaining_destination_buffer_length_ptr = args->stream_ptr->avail_out;
+
+  return NULL;
+}
+
+#define BUFFERED_COMPRESS(gvl, args, RUN_OK)                                                                        \
+  bzs_ext_result_t ext_result;                                                                                      \
+                                                                                                                    \
+  while (true) {                                                                                                    \
+    bzs_ext_byte_t* remaining_destination_buffer             = destination_buffer + *destination_length_ptr;        \
+    size_t          remaining_destination_buffer_length      = destination_buffer_length - *destination_length_ptr; \
+    size_t          prev_remaining_destination_buffer_length = remaining_destination_buffer_length;                 \
+                                                                                                                    \
+    args.remaining_destination_buffer            = remaining_destination_buffer;                                    \
+    args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;                            \
+                                                                                                                    \
+    BZS_EXT_GVL_WRAP(gvl, compress_wrapper, &args);                                                                 \
+    if (args.result != RUN_OK && args.result != BZ_PARAM_ERROR && args.result != BZ_STREAM_END) {                   \
+      return bzs_ext_get_error(args.result);                                                                        \
+    }                                                                                                               \
+                                                                                                                    \
+    *destination_length_ptr += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;      \
+                                                                                                                    \
+    if (args.result == BZ_STREAM_END) {                                                                             \
+      break;                                                                                                        \
+    }                                                                                                               \
+                                                                                                                    \
+    if (*args.remaining_source_length_ptr != 0 || remaining_destination_buffer_length == 0) {                       \
+      ext_result = flush_destination_buffer(                                                                        \
+        destination_file, destination_buffer, destination_length_ptr, destination_buffer_length);                   \
+                                                                                                                    \
+      if (ext_result != 0) {                                                                                        \
+        return ext_result;                                                                                          \
+      }                                                                                                             \
+                                                                                                                    \
+      continue;                                                                                                     \
+    }                                                                                                               \
+                                                                                                                    \
+    break;                                                                                                          \
+  }                                                                                                                 \
+                                                                                                                    \
+  return 0;
 
 static inline bzs_ext_result_t buffered_compress(
   bz_stream*             stream_ptr,
@@ -244,63 +278,15 @@ static inline bzs_ext_result_t buffered_compress(
   size_t                 destination_buffer_length,
   bool                   gvl)
 {
-  bzs_ext_result_t ext_result;
-  // ZSTD_inBuffer    in_buffer = {.src = *source_ptr, .size = *source_length_ptr, .pos = 0};
-  // compress_args_t  args      = {.ctx = ctx, .in_buffer_ptr = &in_buffer};
-
-  // while (true) {
-  //   // ZSTD_outBuffer out_buffer = {
-  //   //   .dst  = destination_buffer + *destination_length_ptr,
-  //   //   .size = destination_buffer_length - *destination_length_ptr,
-  //   //   .pos  = 0};
-  //   //
-  //   // args.out_buffer_ptr = &out_buffer;
-  //   //
-  //   // ZSTDS_EXT_GVL_WRAP(gvl, compress_wrapper, &args);
-  //   // if (ZSTD_isError(args.result)) {
-  //   //   return zstds_ext_get_error(ZSTD_getErrorCode(args.result));
-  //   // }
-  //   //
-  //   // *destination_length_ptr += out_buffer.pos;
-  //
-  //   if (*destination_length_ptr == destination_buffer_length) {
-  //     ext_result = flush_destination_buffer(
-  //       destination_file, destination_buffer, destination_length_ptr, destination_buffer_length);
-  //
-  //     if (ext_result != 0) {
-  //       return ext_result;
-  //     }
-  //
-  //     continue;
-  //   }
-  //
-  //   break;
-  // }
-
-  // *source_ptr += in_buffer.pos;
-  // *source_length_ptr -= in_buffer.pos;
-
-  return 0;
+  compress_args_t run_args = {
+    .stream_ptr                  = stream_ptr,
+    .stream_action               = BZ_RUN,
+    .remaining_source_ptr        = (bzs_ext_byte_t**) source_ptr,
+    .remaining_source_length_ptr = source_length_ptr};
+  BUFFERED_COMPRESS(gvl, run_args, BZ_RUN_OK);
 }
 
 // -- buffered compressor finish --
-
-// typedef struct
-// {
-//   bz_stream* stream_ptr;
-//   // ZSTD_inBuffer*  in_buffer_ptr;
-//   // ZSTD_outBuffer* out_buffer_ptr;
-//   bzs_result_t result;
-// } compressor_finish_args_t;
-//
-// static inline void* compressor_finish_wrapper(void* data)
-// {
-//   compressor_finish_args_t* args = data;
-//
-//   // args->result = ZSTD_compressStream2(args->ctx, args->out_buffer_ptr, args->in_buffer_ptr, ZSTD_e_end);
-//
-//   return NULL;
-// }
 
 static inline bzs_ext_result_t buffered_compressor_finish(
   bz_stream*      stream_ptr,
@@ -310,40 +296,15 @@ static inline bzs_ext_result_t buffered_compressor_finish(
   size_t          destination_buffer_length,
   bool            gvl)
 {
-  bzs_ext_result_t ext_result;
-  // ZSTD_inBuffer            in_buffer = {in_buffer.src = NULL, in_buffer.size = 0, in_buffer.pos = 0};
-  // compressor_finish_args_t args      = {.ctx = ctx, .in_buffer_ptr = &in_buffer};
+  bzs_ext_byte_t* remaining_source        = NULL;
+  size_t          remaining_source_length = 0;
 
-  // while (true) {
-  //   // ZSTD_outBuffer out_buffer = {
-  //   //   out_buffer.dst  = destination_buffer + *destination_length_ptr,
-  //   //   out_buffer.size = destination_buffer_length - *destination_length_ptr,
-  //   //   out_buffer.pos  = 0};
-  //   //
-  //   // args.out_buffer_ptr = &out_buffer;
-  //   //
-  //   // ZSTDS_EXT_GVL_WRAP(gvl, compressor_finish_wrapper, &args);
-  //   // if (ZSTD_isError(args.result)) {
-  //   //   return zstds_ext_get_error(ZSTD_getErrorCode(args.result));
-  //   // }
-  //   //
-  //   // *destination_length_ptr += out_buffer.pos;
-  //
-  //   if (args.result != 0) {
-  //     ext_result = flush_destination_buffer(
-  //       destination_file, destination_buffer, destination_length_ptr, destination_buffer_length);
-  //
-  //     if (ext_result != 0) {
-  //       return ext_result;
-  //     }
-  //
-  //     continue;
-  //   }
-  //
-  //   break;
-  // }
-
-  return 0;
+  compress_args_t finish_args = {
+    .stream_ptr                  = stream_ptr,
+    .stream_action               = BZ_FINISH,
+    .remaining_source_ptr        = &remaining_source,
+    .remaining_source_length_ptr = &remaining_source_length};
+  BUFFERED_COMPRESS(gvl, finish_args, BZ_FINISH_OK);
 }
 
 // -- compress --
@@ -487,32 +448,32 @@ static inline bzs_ext_result_t buffered_decompress(
   bool                   gvl)
 {
   bzs_ext_result_t ext_result;
-  bzs_ext_byte_t*  remaining_source        = (bzs_ext_byte_t*) *source_ptr;
-  size_t           remaining_source_length = *source_length_ptr;
 
   decompress_args_t args = {
     .stream_ptr                  = stream_ptr,
-    .remaining_source_ptr        = &remaining_source,
-    .remaining_source_length_ptr = &remaining_source_length};
+    .remaining_source_ptr        = (bzs_ext_byte_t**) source_ptr,
+    .remaining_source_length_ptr = source_length_ptr};
 
   while (true) {
-    size_t prev_destination_buffer_length = destination_buffer_length;
+    bzs_ext_byte_t* remaining_destination_buffer             = destination_buffer + *destination_length_ptr;
+    size_t          remaining_destination_buffer_length      = destination_buffer_length - *destination_length_ptr;
+    size_t          prev_remaining_destination_buffer_length = remaining_destination_buffer_length;
 
-    args.remaining_destination_buffer            = destination_buffer;
-    args.remaining_destination_buffer_length_ptr = &destination_buffer_length;
+    args.remaining_destination_buffer            = remaining_destination_buffer;
+    args.remaining_destination_buffer_length_ptr = &remaining_destination_buffer_length;
 
     BZS_EXT_GVL_WRAP(gvl, decompress_wrapper, &args);
     if (args.result != BZ_OK && args.result != BZ_PARAM_ERROR && args.result != BZ_STREAM_END) {
       return bzs_ext_get_error(args.result);
     }
 
-    *destination_length_ptr += prev_destination_buffer_length - destination_buffer_length;
+    *destination_length_ptr += prev_remaining_destination_buffer_length - remaining_destination_buffer_length;
 
     if (args.result == BZ_STREAM_END) {
       break;
     }
 
-    if (remaining_source_length != 0 || destination_buffer_length == 0) {
+    if (*args.remaining_source_length_ptr != 0 || remaining_destination_buffer_length == 0) {
       ext_result = flush_destination_buffer(
         destination_file, destination_buffer, destination_length_ptr, destination_buffer_length);
 
@@ -525,11 +486,6 @@ static inline bzs_ext_result_t buffered_decompress(
 
     break;
   }
-
-  size_t source_length_consumed = remaining_source - *source_ptr;
-
-  *source_ptr += source_length_consumed;
-  *source_length_ptr -= source_length_consumed;
 
   return 0;
 }

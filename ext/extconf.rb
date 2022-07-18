@@ -63,6 +63,8 @@ dir_config extension_name
 
 # rubocop:disable Style/GlobalVars
 $srcs = %w[
+  stream/compressor
+  stream/decompressor
   buffer
   error
   io
