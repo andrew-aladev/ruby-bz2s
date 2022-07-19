@@ -135,10 +135,10 @@
   <span class="ruby-constant">Validation</span>.<span class="ruby-identifier">validate_bool</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:gvl</span>]
 
   <span class="ruby-identifier">block_size</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:block_size</span>]
-  <span class="ruby-constant">Validation</span>.<span class="ruby-identifier">validate_positive_integer</span> <span class="ruby-identifier">block_size</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_size</span>.<span class="ruby-identifier">nil?</span>
+  <span class="ruby-constant">Validation</span>.<span class="ruby-identifier">validate_not_negative_integer</span> <span class="ruby-identifier">block_size</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_size</span>.<span class="ruby-identifier">nil?</span>
 
   <span class="ruby-identifier">work_factor</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:work_factor</span>]
-  <span class="ruby-constant">Validation</span>.<span class="ruby-identifier">validate_positive_integer</span> <span class="ruby-identifier">work_factor</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">work_factor</span>.<span class="ruby-identifier">nil?</span>
+  <span class="ruby-constant">Validation</span>.<span class="ruby-identifier">validate_not_negative_integer</span> <span class="ruby-identifier">work_factor</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">work_factor</span>.<span class="ruby-identifier">nil?</span>
 
   <span class="ruby-identifier">quiet</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:quiet</span>]
   <span class="ruby-constant">Validation</span>.<span class="ruby-identifier">validate_bool</span> <span class="ruby-identifier">quiet</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">quiet</span>.<span class="ruby-identifier">nil?</span>

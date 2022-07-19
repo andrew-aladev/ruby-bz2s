@@ -1,10 +1,15 @@
-Wed, 13 Jul 2022 12:08:30 +0300
+Tue, 19 Jul 2022 12:50:45 +0300
 lib/bzs.rb	Wed, 13 Jul 2022 12:07:00 +0300
 lib/bzs/error.rb	Tue, 12 Jul 2022 17:41:41 +0300
-lib/bzs/option.rb	Wed, 13 Jul 2022 12:08:11 +0300
+lib/bzs/file.rb	Mon, 18 Jul 2022 13:10:34 +0300
+lib/bzs/option.rb	Wed, 13 Jul 2022 13:31:57 +0300
+lib/bzs/stream/raw/compressor.rb	Mon, 18 Jul 2022 18:04:43 +0300
+lib/bzs/stream/raw/decompressor.rb	Mon, 18 Jul 2022 18:05:08 +0300
+lib/bzs/stream/reader.rb	Mon, 18 Jul 2022 18:05:32 +0300
+lib/bzs/stream/writer.rb	Mon, 18 Jul 2022 18:05:47 +0300
 lib/bzs/string.rb	Tue, 12 Jul 2022 18:16:02 +0300
 lib/bzs/validation.rb	Tue, 12 Jul 2022 18:38:03 +0300
 lib/bzs/version.rb	Tue, 12 Jul 2022 17:41:46 +0300
 AUTHORS	Thu, 07 Jul 2022 12:00:14 +0300
 LICENSE	Thu, 07 Jul 2022 11:54:19 +0300
-README.md	Thu, 07 Jul 2022 12:17:28 +0300
+README.md	Tue, 19 Jul 2022 12:46:13 +0300
