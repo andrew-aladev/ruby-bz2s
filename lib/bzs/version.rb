@@ -2,5 +2,5 @@
 # Copyright (c) 2022 AUTHORS, MIT License.
 
 module BZS
-  VERSION = "1.0.0".freeze
+  VERSION = "1.0.1".freeze
 end
