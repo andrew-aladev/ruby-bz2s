@@ -98,6 +98,8 @@
 
 <p>See <a href="https://gitlab.com/bzip2/bzip2">bzip2 library</a>.</p>
 
+<p>Other bindings: <a href="https://github.com/andrew-aladev/ruby-lzws">lzw</a>, <a href="https://github.com/andrew-aladev/ruby-brs">brotli</a>, <a href="https://github.com/andrew-aladev/ruby-zstds">zstd</a>.</p>
+
 <h2 id="label-Installation">Installation<span><a href="#label-Installation">&para;</a> <a href="#top">&uarr;</a></span></h2>
 
 <p>Operating systems: GNU/Linux, FreeBSD, OSX.</p>
@@ -254,6 +256,30 @@ gem install ruby-bzs -- --with-opt-include=/opt/homebrew/include --with-opt-lib=
 <td>false</td>
 <td>enables global VM lock where possible</td>
 </tr>
+<tr>
+<td>`block_size`</td>
+<td>1 - 9</td>
+<td>9</td>
+<td>block size to be used for compression</td>
+</tr>
+<tr>
+<td>`work_factor`</td>
+<td>0 - 250</td>
+<td>0</td>
+<td>controls threshold for switching from standard to fallback algorithm</td>
+</tr>
+<tr>
+<td>`small`</td>
+<td>true/false</td>
+<td>true</td>
+<td>enables alternative decompression algorithm with less memory</td>
+</tr>
+<tr>
+<td>`quiet`</td>
+<td>true/false</td>
+<td>false</td>
+<td>disables bzip2 library logging</td>
+</tr>
 </tbody>
 </table>
 
@@ -268,6 +294,9 @@ gem install ruby-bzs -- --with-opt-include=/opt/homebrew/include --with-opt-lib=
 <pre class="ruby"><span class="ruby-value">:source_buffer_length</span>
 <span class="ruby-value">:destination_buffer_length</span>
 <span class="ruby-value">:gvl</span>
+<span class="ruby-value">:block_size</span>
+<span class="ruby-value">:work_factor</span>
+<span class="ruby-value">:quiet</span>
 </pre>
 
 <p>Possible decompressor options:</p>
@@ -275,14 +304,16 @@ gem install ruby-bzs -- --with-opt-include=/opt/homebrew/include --with-opt-lib=
 <pre class="ruby"><span class="ruby-value">:source_buffer_length</span>
 <span class="ruby-value">:destination_buffer_length</span>
 <span class="ruby-value">:gvl</span>
+<span class="ruby-value">:small</span>
+<span class="ruby-value">:quiet</span>
 </pre>
 
 <p>Example:</p>
 
 <pre class="ruby"><span class="ruby-identifier">require</span> <span class="ruby-string">&quot;bzs&quot;</span>
 
-<span class="ruby-identifier">data</span> = <span class="ruby-constant">BZS</span><span class="ruby-operator">::</span><span class="ruby-constant">String</span>.<span class="ruby-identifier">compress</span> <span class="ruby-string">&quot;sample string&quot;</span>
-<span class="ruby-identifier">puts</span> <span class="ruby-constant">BZS</span><span class="ruby-operator">::</span><span class="ruby-constant">String</span>.<span class="ruby-identifier">decompress</span>(<span class="ruby-identifier">data</span>)
+<span class="ruby-identifier">data</span> = <span class="ruby-constant">BZS</span><span class="ruby-operator">::</span><span class="ruby-constant">String</span>.<span class="ruby-identifier">compress</span> <span class="ruby-string">&quot;sample string&quot;</span>, <span class="ruby-value">:block_size</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-value">1</span>
+<span class="ruby-identifier">puts</span> <span class="ruby-constant">BZS</span><span class="ruby-operator">::</span><span class="ruby-constant">String</span>.<span class="ruby-identifier">decompress</span>(<span class="ruby-identifier">data</span>, <span class="ruby-value">:block_size</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-value">1</span>)
 </pre>
 
 <h2 id="label-String">String<span><a href="#label-String">&para;</a> <a href="#top">&uarr;</a></span></h2>
