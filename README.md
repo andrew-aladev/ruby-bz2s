@@ -131,6 +131,10 @@ Please review [rdoc generated docs](https://andrew-aladev.github.io/ruby-bzs).
 | `source_buffer_length`          | 0 - inf        | 0 (auto)   | internal buffer length for source data |
 | `destination_buffer_length`     | 0 - inf        | 0 (auto)   | internal buffer length for description data |
 | `gvl`                           | true/false     | false      | enables global VM lock where possible |
+| `block_size`                    | 1 - 9          | 9          | block size to be used for compression |
+| `work_factor`                   | 0 - 250        | 0          | controls threshold for switching from standard to fallback algorithm |
+| `small`                         | true/false     | true       | enables alternative decompression algorithm with less memory |
+| `quiet`                         | true/false     | false      | disables bzip2 library logging |
 
 There are internal buffers for compressed and decompressed data.
 For example you want to use 1 KB as `source_buffer_length` for compressor - please use 256 B as `destination_buffer_length`.
@@ -147,6 +151,9 @@ Possible compressor options:
 :source_buffer_length
 :destination_buffer_length
 :gvl
+:block_size
+:work_factor
+:quiet
 ```
 
 Possible decompressor options:
@@ -154,6 +161,8 @@ Possible decompressor options:
 :source_buffer_length
 :destination_buffer_length
 :gvl
+:small
+:quiet
 ```
 
 Example:
@@ -161,8 +170,8 @@ Example:
 ```ruby
 require "bzs"
 
-data = BZS::String.compress "sample string"
-puts BZS::String.decompress(data)
+data = BZS::String.compress "sample string", :block_size => 1
+puts BZS::String.decompress(data, :block_size => 1)
 ```
 
 ## String
