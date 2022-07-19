@@ -6,7 +6,7 @@
 
 See [bzip2 library](https://gitlab.com/bzip2/bzip2).
 
-Other bindings: [lzw](https://github.com/andrew-aladev/ruby-lzws), [brotli](https://github.com/andrew-aladev/ruby-brs), [zstd](https://github.com/andrew-aladev/ruby-zstds)
+Other bindings: [lzw](https://github.com/andrew-aladev/ruby-lzws), [brotli](https://github.com/andrew-aladev/ruby-brs), [zstd](https://github.com/andrew-aladev/ruby-zstds).
 
 ## Installation
 
