@@ -1,8 +1,8 @@
 # Ruby bindings for bzip2 library
 
-| AppVeyor | Jenkins | Github actions | Codecov | Gem  |
-| :------: | :-----: | :------------: | :-----: | :--: |
-| [![AppVeyor test status](https://ci.appveyor.com/api/projects/status/github/andrew-aladev/ruby-bzs?branch=main&svg=true)](https://ci.appveyor.com/project/andrew-aladev/ruby-bzs/branch/main) | [![Jenkins test status](http://37.187.122.190:58182/buildStatus/icon?job=ruby-bzs)](http://37.187.122.190:58182/job/ruby-bzs) | [![Github Actions test status](https://github.com/andrew-aladev/ruby-bzs/workflows/test/badge.svg?branch=main)](https://github.com/andrew-aladev/ruby-bzs/actions) | [![Codecov](https://codecov.io/gh/andrew-aladev/ruby-bzs/branch/main/graph/badge.svg)](https://codecov.io/gh/andrew-aladev/ruby-bzs) | [![Gem](https://img.shields.io/gem/v/ruby-bzs.svg)](https://rubygems.org/gems/ruby-bzs) |
+| Github actions | Codecov | Gem  |
+| :------------: | :-----: | :--: |
+| [![Github Actions test status](https://github.com/andrew-aladev/ruby-bzs/workflows/test/badge.svg?branch=main)](https://github.com/andrew-aladev/ruby-bzs/actions) | [![Codecov](https://codecov.io/gh/andrew-aladev/ruby-bzs/branch/main/graph/badge.svg)](https://codecov.io/gh/andrew-aladev/ruby-bzs) | [![Gem](https://img.shields.io/gem/v/ruby-bzs.svg)](https://rubygems.org/gems/ruby-bzs) |
 
 See [bzip2 library](https://gitlab.com/bzip2/bzip2).
 
